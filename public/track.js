@@ -8,11 +8,35 @@ import {
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
 
+function showStatus(message) {
+  console.log("[Castiel]", message);
+
+  const display = document.createElement("div");
+  display.textContent = "Castiel: " + message;
+  display.style.cssText = `
+    position: fixed;
+    bottom: 12px;
+    left: 12px;
+    z-index: 999999;
+    background: #10251f;
+    color: white;
+    padding: 12px;
+    border-radius: 8px;
+    font: 13px sans-serif;
+    max-width: 90%;
+    overflow-wrap: anywhere;
+  `;
+
+  document.body.appendChild(display);
+}
+
 const script = document.currentScript ||
   [...document.querySelectorAll("script[data-site-id]")]
     .find(s => s.src.includes("/track.js"));
 
-if (script) {
+if (!script) {
+  showStatus("ERROR: tracking script tag not found.");
+} else {
   const siteId = script.dataset.siteId;
 
   const firebaseConfig = {
@@ -23,11 +47,13 @@ if (script) {
   };
 
   if (
-    siteId &&
-    firebaseConfig.apiKey &&
-    firebaseConfig.projectId &&
-    firebaseConfig.appId
+    !siteId ||
+    !firebaseConfig.apiKey ||
+    !firebaseConfig.projectId ||
+    !firebaseConfig.appId
   ) {
+    showStatus("ERROR: missing tracking configuration.");
+  } else {
     try {
       const app = initializeApp(
         firebaseConfig,
@@ -68,29 +94,36 @@ if (script) {
         }
       }
 
-      
-addDoc(collection(db, "analyticsEvents"), {
-  siteId,
-  eventName: "page_view",
-  page,
-  domain,
-  visitorId: getVisitorId(),
-  clientTime: Date.now(),
-  createdAt: serverTimestamp()
-})
-  .then((docRef) => {
-    console.log("Castiel: page view saved", docRef.id);
-  })
-  .catch((error) => {
-    console.error("Castiel: Firestore write failed", {
-      code: error.code,
-      message: error.message
-    });
-  });
+      showStatus("Tracker loaded. Sending test page view...");
 
+      addDoc(collection(db, "analyticsEvents"), {
+        siteId,
+        eventName: "page_view",
+        page,
+        domain,
+        visitorId: getVisitorId(),
+        clientTime: Date.now(),
+        createdAt: serverTimestamp()
+      })
+        .then((docRef) => {
+          showStatus("SUCCESS: page view saved. ID: " + docRef.id);
+        })
+        .catch((error) => {
+          showStatus(
+            "WRITE FAILED: " +
+            (error.code || "unknown") +
+            " — " + error.message
+          );
+
+          console.error("[Castiel] Firestore write failed", error);
+        });
 
     } catch (error) {
-      console.warn("Castiel tracker could not start.", error);
+      showStatus(
+        "STARTUP FAILED: " + error.message
+      );
+
+      console.error("[Castiel] Startup failed", error);
     }
   }
 }

@@ -68,17 +68,26 @@ if (script) {
         }
       }
 
-      addDoc(collection(db, "analyticsEvents"), {
-        siteId,
-        eventName: "page_view",
-        page,
-        domain,
-        visitorId: getVisitorId(),
-        clientTime: Date.now(),
-        createdAt: serverTimestamp()
-      }).catch(() => {
-        // Analytics failures should not interrupt the website.
-      });
+      
+addDoc(collection(db, "analyticsEvents"), {
+  siteId,
+  eventName: "page_view",
+  page,
+  domain,
+  visitorId: getVisitorId(),
+  clientTime: Date.now(),
+  createdAt: serverTimestamp()
+})
+  .then((docRef) => {
+    console.log("Castiel: page view saved", docRef.id);
+  })
+  .catch((error) => {
+    console.error("Castiel: Firestore write failed", {
+      code: error.code,
+      message: error.message
+    });
+  });
+
 
     } catch (error) {
       console.warn("Castiel tracker could not start.", error);
